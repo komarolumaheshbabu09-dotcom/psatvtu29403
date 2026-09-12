@@ -1,0 +1,178 @@
+import java.io.*;
+import java.util.*;
+import java.util.stream.*;
+import static java.util.stream.Collectors.joining;
+
+class Result {
+
+    public static List<Integer> circularPalindromes(String s) {
+
+        int n = s.length();
+
+        String doubled = s + s;
+
+        // Transform string
+        int m = 4 * n + 1;
+        int[] a = new int[m];
+
+        for (int i = 0; i < m; i++) {
+            if (i % 2 == 0) {
+                a[i] = 26;
+            } else {
+                a[i] = doubled.charAt(i / 2) - 'a';
+            }
+        }
+
+        // Manacher's algorithm
+        int[] radius = new int[m];
+
+        int center = 0;
+        int right = 0;
+
+        for (int i = 0; i < m; i++) {
+
+            if (i < right) {
+                radius[i] =
+                    Math.min(right - i, radius[2 * center - i]);
+            }
+
+            while (i - radius[i] - 1 >= 0 &&
+                   i + radius[i] + 1 < m &&
+                   a[i - radius[i] - 1] ==
+                   a[i + radius[i] + 1]) {
+
+                radius[i]++;
+            }
+
+            if (i + radius[i] > right) {
+                center = i;
+                right = i + radius[i];
+            }
+        }
+
+        // Sparse table
+        int log = 1;
+
+        while ((1 << log) <= m) {
+            log++;
+        }
+
+        int[][] st = new int[log][m];
+
+        for (int i = 0; i < m; i++) {
+            st[0][i] = radius[i];
+        }
+
+        for (int j = 1; j < log; j++) {
+
+            int len = 1 << j;
+            int half = len >> 1;
+
+            for (int i = 0; i + len <= m; i++) {
+
+                st[j][i] = Math.max(
+                    st[j - 1][i],
+                    st[j - 1][i + half]
+                );
+            }
+        }
+
+        List<Integer> result = new ArrayList<>();
+
+        // Every rotation
+        for (int start = 0; start < n; start++) {
+
+            int L = start * 2 + 1;
+            int R = (start + n - 1) * 2 + 1;
+
+            int low = 1;
+            int high = n;
+            int answer = 1;
+
+            while (low <= high) {
+
+                int len = (low + high) / 2;
+
+                int left = L + len - 1;
+                int rightIndex = R - len + 1;
+
+                if (left <= rightIndex &&
+                    rangeMax(st, left, rightIndex) >= len) {
+
+                    answer = len;
+                    low = len + 1;
+
+                } else {
+                    high = len - 1;
+                }
+            }
+
+            result.add(answer);
+        }
+
+        return result;
+    }
+
+    private static int rangeMax(
+            int[][] st, int left, int right) {
+
+        int length = right - left + 1;
+
+        int k = 31 -
+                Integer.numberOfLeadingZeros(length);
+
+        return Math.max(
+            st[k][left],
+            st[k][right - (1 << k) + 1]
+        );
+    }
+}
+
+public class Solution {
+
+    public static void main(String[] args)
+            throws IOException {
+
+        BufferedReader bufferedReader =
+            new BufferedReader(
+                new InputStreamReader(System.in));
+
+        BufferedWriter bufferedWriter =
+            new BufferedWriter(
+                new FileWriter(
+                    System.getenv("OUTPUT_PATH")));
+
+        int n = Integer.parseInt(
+            bufferedReader.readLine().trim());
+
+        String s = bufferedReader.readLine();
+
+        List<Integer> result =
+            Result.circularPalindromes(s);
+
+        bufferedWriter.write(
+            result.stream()
+                .map(Object::toString)
+                .collect(joining("\n"))
+                + "\n"
+        );
+
+        bufferedReader.close();
+        bufferedWriter.close();
+    }
+}
+out put:
+
+12
+12
+10
+8
+8
+9
+11
+13
+11
+9
+8
+8
+10
